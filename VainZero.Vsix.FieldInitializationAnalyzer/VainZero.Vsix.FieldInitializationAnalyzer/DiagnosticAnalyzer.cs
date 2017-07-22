@@ -75,20 +75,26 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
 
             ImmutableDictionary<ISymbol, Member> Members { get; }
 
-            HashSet<ISymbol> Done { get; } = new HashSet<ISymbol>();
+            ImmutableDictionary<ISymbol, BlockSyntax> Methods { get; }
 
-            public Diagnoser(SyntaxNodeAnalysisContext analysisContext, ImmutableDictionary<ISymbol, Member> members)
+            /// <summary>
+            /// A set of symbols (constructor/method/property) whose body is analyzing or analyzed.
+            /// </summary>
+            HashSet<ISymbol> VisitedSymbols { get; } = new HashSet<ISymbol>();
+
+            public Diagnoser(SyntaxNodeAnalysisContext analysisContext, ImmutableDictionary<ISymbol, Member> members, ImmutableDictionary<ISymbol, BlockSyntax> methods)
             {
                 AnalysisContext = analysisContext;
                 Members = members;
+                Methods = methods;
             }
 
             bool TryVisit(ISymbol symbol)
             {
-                if (!Done.Add(symbol)) return false;
+                if (!VisitedSymbols.Add(symbol)) return false;
 
                 // In case of infinite loop...
-                if (Done.Count > 1000)
+                if (VisitedSymbols.Count > 100)
                 {
                     System.Diagnostics.Debug.WriteLine("An infinite loop is detected.");
                     return false;
@@ -97,41 +103,63 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
                 return true;
             }
 
-            static bool TryAssignedExpression(SyntaxNode node, out ExpressionSyntax expression)
+            void MarkAsInitialized(ISymbol symbol)
             {
-                if (node is AssignmentExpressionSyntax assignment
-                    && assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
-                    && assignment.Left != null)
+                if (Members.TryGetValue(symbol, out var member))
                 {
-                    expression = assignment.Left;
-                    return true;
+                    member.IsInitialized = true;
                 }
-                else if (node is ArgumentSyntax argument && argument.Expression != null)
-                {
-                    expression = argument.Expression;
-                    return true;
-                }
+            }
 
-                expression = default(ExpressionSyntax);
-                return false;
+            void MarkOutArgumentsAsInitialized(ArgumentListSyntax argumentList)
+            {
+                if (argumentList == null || argumentList.Arguments == null) return;
+
+                foreach (var argument in argumentList.Arguments)
+                {
+                    if (argument.RefOrOutKeyword.IsKind(SyntaxKind.OutKeyword))
+                    {
+                        if (argument.Expression == null) continue;
+
+                        var symbol = SemanticModel.GetSymbolInfo(argument.Expression).Symbol;
+                        if (symbol == null) continue;
+
+                        MarkAsInitialized(symbol);
+                    }
+                }
             }
 
             void AnalyzeStatement(StatementSyntax statement)
             {
                 foreach (var node in statement.DescendantNodes())
                 {
-                    if (TryAssignedExpression(node, out var expression))
+                    if (node is InvocationExpressionSyntax invocation)
                     {
-                        var symbol = SemanticModel.GetSymbolInfo(expression).Symbol;
-                        if (symbol == null) continue;
+                        MarkOutArgumentsAsInitialized(invocation.ArgumentList);
 
-                        if (Members.TryGetValue(symbol, out var member))
+                        var symbol = SemanticModel.GetSymbolInfo(invocation.Expression).Symbol;
+                        if (symbol != null && Methods.TryGetValue(symbol, out var block))
                         {
-                            member.IsInitialized = true;
+                            AnalyzeMethod(block, symbol);
                         }
                     }
+                    else if (node is AssignmentExpressionSyntax assignment
+                        && assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)
+                        && assignment.Left != null)
+                    {
+                        // An expression ``left = ...`` initializes `left`.
 
-                    if (node is IdentifierNameSyntax identifier)
+                        var symbol = SemanticModel.GetSymbolInfo(assignment.Left).Symbol;
+                        if (symbol == null) continue;
+
+                        MarkAsInitialized(symbol);
+
+                        if (Methods.TryGetValue(symbol, out var block))
+                        {
+                            AnalyzeMethod(block, symbol);
+                        }
+                    }
+                    else if (node is IdentifierNameSyntax identifier)
                     {
                         var symbol = SemanticModel.GetSymbolInfo(identifier).Symbol;
                         if (symbol == null) continue;
@@ -151,6 +179,13 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
                 {
                     AnalyzeStatement(statement);
                 }
+            }
+
+            void AnalyzeMethod(BlockSyntax block, ISymbol symbol)
+            {
+                if (!TryVisit(symbol)) return;
+
+                AnalyzeStatements(block.Statements);
             }
 
             void AnalyzeDelegateConstructor(ConstructorDeclarationSyntax constructorDecl)
@@ -220,6 +255,9 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
             ImmutableDictionary<ISymbol, Member>.Builder Members { get; } =
                 ImmutableDictionary.CreateBuilder<ISymbol, Member>();
 
+            ImmutableDictionary<ISymbol, BlockSyntax>.Builder Methods { get; } =
+                ImmutableDictionary.CreateBuilder<ISymbol, BlockSyntax>();
+
             public DiagnoserCreator(SyntaxNodeAnalysisContext analysisContext)
             {
                 AnalysisContext = analysisContext;
@@ -244,20 +282,15 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
                 }
             }
 
-            void AddProperty(PropertyDeclarationSyntax propertyDecl)
+            void AddPropertyAsMember(PropertyDeclarationSyntax propertyDecl, IPropertySymbol symbol)
             {
                 if (propertyDecl.ExpressionBody != null) return;
                 if (propertyDecl.Initializer != null) return;
 
-                if (propertyDecl.Modifiers.Any(m =>
-                    m.IsKind(SyntaxKind.AbstractKeyword)
-                    || m.IsKind(SyntaxKind.StaticKeyword)
-                    )) return;
+                if (propertyDecl.AccessorList == null) return;
+                if (propertyDecl.AccessorList.Accessors.Any(a => a.Body != null)) return;
 
-                if (propertyDecl.AccessorList?.Accessors.Any(a => a.Body != null) != false) return;
-
-                var symbol = SemanticModel.GetDeclaredSymbol(propertyDecl);
-                if (symbol == null) return;
+                if (symbol.IsAbstract || symbol.IsStatic) return;
 
                 var hasNonprivateSetter =
                     !symbol.IsReadOnly
@@ -266,10 +299,31 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
                 Members.Add(symbol, new Member(symbol, canBeUninitialized: hasNonprivateSetter));
             }
 
-            public Diagnoser Create(ConstructorDeclarationSyntax constructorDecl)
+            void AddPropertyAsMethod(PropertyDeclarationSyntax propertyDecl, IPropertySymbol symbol)
             {
-                var typeDecl = (TypeDeclarationSyntax)constructorDecl.Parent;
+                if (symbol.IsReadOnly || symbol.IsAbstract || symbol.IsStatic) return;
 
+                if (propertyDecl.AccessorList == null) return;
+                var setter = 
+                    propertyDecl.AccessorList.Accessors
+                    .FirstOrDefault(a => a.Keyword.IsKind(SyntaxKind.SetKeyword));
+                if (setter == null || setter.Body == null) return;
+
+                Methods.Add(symbol, setter.Body);
+            }
+
+            void AddMethod(MethodDeclarationSyntax methodDecl)
+            {
+                if (methodDecl.Body == null) return;
+
+                var symbol = SemanticModel.GetDeclaredSymbol(methodDecl);
+                if (symbol == null) return;
+
+                Methods.Add(symbol, methodDecl.Body);
+            }
+
+            public Diagnoser Create(TypeDeclarationSyntax typeDecl)
+            {
                 foreach (var member in typeDecl.Members)
                 {
                     if (member is FieldDeclarationSyntax fieldDecl)
@@ -278,12 +332,66 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
                     }
                     else if (member is PropertyDeclarationSyntax propertyDecl)
                     {
-                        AddProperty(propertyDecl);
+                        var symbol = SemanticModel.GetDeclaredSymbol(propertyDecl);
+                        if (symbol == null) continue;
+
+                        AddPropertyAsMember(propertyDecl, symbol);
+                        AddPropertyAsMethod(propertyDecl, symbol);
+                    }
+                    else if (member is MethodDeclarationSyntax methodDecl)
+                    {
+                        AddMethod(methodDecl);
                     }
                 }
 
-                return new Diagnoser(AnalysisContext, Members.ToImmutable());
+                return new Diagnoser(AnalysisContext, Members.ToImmutable(), Methods.ToImmutable());
             }
+        }
+
+        sealed class ConstructorDelegationDetector
+        {
+            SemanticModel SemanticModel { get; }
+
+            public ConstructorDelegationDetector(SemanticModel semanticModel)
+            {
+                SemanticModel = semanticModel;
+            }
+
+            /// <summary>
+            /// Gets a value indicating whether the specified constructor is delegated by other constructors.
+            /// </summary>
+            public bool IsDelegated(ConstructorDeclarationSyntax targetDecl, TypeDeclarationSyntax typeDecl)
+            {
+                var target = SemanticModel.GetDeclaredSymbol(targetDecl);
+                if (target == null) return false;
+
+                foreach (var member in typeDecl.Members)
+                {
+                    if (member is ConstructorDeclarationSyntax sourceDecl)
+                    {
+                        var initializer = sourceDecl.Initializer;
+                        if (initializer == null) continue;
+                        if (!initializer.ThisOrBaseKeyword.IsKind(SyntaxKind.ThisKeyword)) continue;
+
+                        var symbol = SemanticModel.GetDeclaredSymbol(initializer);
+                        if (symbol == target) return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        static bool IsPrivate(ConstructorDeclarationSyntax constructorDecl)
+        {
+            foreach (var modifier in constructorDecl.Modifiers)
+            {
+                if (modifier.IsKind(SyntaxKind.PublicKeyword)
+                    || modifier.IsKind(SyntaxKind.InternalKeyword)
+                    || modifier.IsKind(SyntaxKind.ProtectedKeyword)
+                    ) return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -291,10 +399,16 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
         /// </summary>
         static void AnalyzeConstructor(SyntaxNodeAnalysisContext context)
         {
-            // このコンストラクターが private で、直接 new する式がないなら、解析しない。
-
             var constructorDecl = (ConstructorDeclarationSyntax)context.Node;
-            var diagnoser = new DiagnoserCreator(context).Create(constructorDecl);
+            var typeDecl = (TypeDeclarationSyntax)constructorDecl.Parent;
+
+            // If the constructor is private and delegated by other constructors,
+            // it doesn't need to initialize all fields
+            // because delegating constructors do.
+            if (IsPrivate(constructorDecl)
+                && new ConstructorDelegationDetector(context.SemanticModel).IsDelegated(constructorDecl, typeDecl)) return;
+
+            var diagnoser = new DiagnoserCreator(context).Create(typeDecl);
             diagnoser.Analyze(constructorDecl);
         }
 

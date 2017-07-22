@@ -52,18 +52,6 @@ namespace VainZero.Sample
             }
         }
 
-        public class RefArgumentSample
-        {
-            int value;
-
-            public RefArgumentSample()
-            {
-                Interlocked.Increment(ref value);
-
-                Debug.WriteLine(value);
-            }
-        }
-
         public class InitializePropertyViaConstructorSample
         {
             public int Value { get; set; }
@@ -177,6 +165,19 @@ namespace VainZero.Sample
                 Debug.WriteLine(value);
 
                 value = 1;
+            }
+        }
+
+        public class RefArgumentSample
+        {
+            int value;
+
+            public RefArgumentSample()
+            {
+                // NG: `ref` arguments can be used before initialization.
+                Interlocked.Increment(ref value);
+
+                Debug.WriteLine(value);
             }
         }
 
