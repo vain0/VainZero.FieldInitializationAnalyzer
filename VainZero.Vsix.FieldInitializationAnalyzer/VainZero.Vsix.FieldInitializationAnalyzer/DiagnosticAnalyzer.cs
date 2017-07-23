@@ -13,6 +13,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class VainZeroVsixFieldInitializationAnalyzerAnalyzer : DiagnosticAnalyzer
     {
+        #region TO BE REMOVED
         public const string ConstructorDiagnosticId = "VainZeroFieldInitializationAnalyzerConstructorDiagnostic";
         public const string FieldDiagnosticId = "VainZeroFieldInitializationAnalyzerFieldDiagnostic";
 
@@ -42,6 +43,10 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
             ImmutableArray.Create(ConstructorRule, FieldRule);
+        #endregion
+
+        //public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
+        //    Analyzing.MyRule.SupportedDiagnostics();
 
         public override void Initialize(AnalysisContext context)
         {
@@ -138,9 +143,12 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
                         MarkOutArgumentsAsInitialized(invocation.ArgumentList);
 
                         var symbol = SemanticModel.GetSymbolInfo(invocation.Expression).Symbol;
-                        if (symbol != null && Methods.TryGetValue(symbol, out var block))
+                        if (symbol != null)
                         {
-                            AnalyzeMethod(block, symbol);
+                            if (Methods.TryGetValue(symbol, out var block))
+                            {
+                                AnalyzeMethod(block, symbol);
+                            }
                         }
                     }
                     else if (node is AssignmentExpressionSyntax assignment
@@ -221,10 +229,12 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
                 }
             }
 
-            public void Analyze(ConstructorDeclarationSyntax constructorDecl)
+            /// <summary>
+            /// Reports a warning for each field which isn't initialized with
+            /// the initializer, constructor or public setters.
+            /// </summary>
+            void ReportUninitializedFields(ConstructorDeclarationSyntax constructorDecl)
             {
-                AnalyzeConstructor(constructorDecl);
-
                 var uninitializedUnusedMembers =
                     Members
                     .Where(kv =>
@@ -243,6 +253,12 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
                             string.Join(", ", uninitializedUnusedMembers.Select(m => m.Symbol.Name))
                         ));
                 }
+            }
+
+            public void Analyze(ConstructorDeclarationSyntax constructorDecl)
+            {
+                AnalyzeConstructor(constructorDecl);
+                ReportUninitializedFields(constructorDecl);
             }
         }
 

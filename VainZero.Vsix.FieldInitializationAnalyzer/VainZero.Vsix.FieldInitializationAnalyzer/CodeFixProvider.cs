@@ -22,7 +22,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
 
         public sealed override ImmutableArray<string> FixableDiagnosticIds
         {
-            get { return ImmutableArray.Create(VainZeroVsixFieldInitializationAnalyzerAnalyzer.ConstructorDiagnosticId); }
+            get { return ImmutableArray<string>.Empty; }
         }
 
         public sealed override FixAllProvider GetFixAllProvider()

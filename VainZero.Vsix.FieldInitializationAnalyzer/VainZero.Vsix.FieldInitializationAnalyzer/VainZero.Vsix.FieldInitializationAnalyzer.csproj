@@ -34,6 +34,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Analyzing\MemberMap.cs" />
+    <Compile Include="Analyzing\MemberVariable.cs" />
+    <Compile Include="Analyzing\MyReporter.cs" />
+    <Compile Include="Analyzing\MyTypeAnalyzer.cs" />
+    <Compile Include="Analyzing\MemberMapCreator.cs" />
+    <Compile Include="Analyzing\MyConstructorAnalyzer.cs" />
     <Compile Include="CodeFixProvider.cs" />
     <Compile Include="DiagnosticAnalyzer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
