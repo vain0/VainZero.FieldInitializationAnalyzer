@@ -52,6 +52,19 @@ namespace VainZero.Sample
             }
         }
 
+        public class RefArgumentSample
+        {
+            int value;
+
+            public RefArgumentSample()
+            {
+                // NG: `ref` arguments can be used before initialization.
+                Interlocked.Increment(ref value);
+
+                Debug.WriteLine(value);
+            }
+        }
+
         public class InitializePropertyViaConstructorSample
         {
             public int Value { get; set; }
@@ -135,20 +148,41 @@ namespace VainZero.Sample
             }
         }
 
-        public class DelegateConstructorSample
+        public class InitializeViaDelegatedConstructorSample
         {
             int value1;
             int value2;
 
-            DelegateConstructorSample(double x)
+            InitializeViaDelegatedConstructorSample(double x)
             {
                 value1 = 1;
+
+                // OK: This constructor doesn't initialize `value2`, however,
+                //     the delegating constructor does.
             }
 
-            public DelegateConstructorSample(string x)
+            public InitializeViaDelegatedConstructorSample(string x)
                 : this(1)
             {
+                // OK: `value1` is initialized by the delegated constructor.
+                Debug.WriteLine(value1);
+
                 value2 = 2;
+            }
+        }
+
+        public class SetViaPublicSetterSample
+        {
+            int value;
+            public int Value
+            {
+                get { return value; }
+                set { this.value = value; }
+            }
+
+            public SetViaPublicSetterSample()
+            {
+                // OK: Because `value` is a backing field of `Value`, it doesn't need to be initialized.
             }
         }
     }
@@ -165,19 +199,6 @@ namespace VainZero.Sample
                 Debug.WriteLine(value);
 
                 value = 1;
-            }
-        }
-
-        public class RefArgumentSample
-        {
-            int value;
-
-            public RefArgumentSample()
-            {
-                // NG: `ref` arguments can be used before initialization.
-                Interlocked.Increment(ref value);
-
-                Debug.WriteLine(value);
             }
         }
 
@@ -219,6 +240,74 @@ namespace VainZero.Sample
             public NotInitializePrivateSetterPropertySample()
             {
                 // NG: Not initialized.
+            }
+        }
+
+        public class UseBeforeInitializationInGetterSample
+        {
+            int value;
+
+            public int Value
+            {
+                get { return value; }
+            }
+
+            public UseBeforeInitializationInGetterSample()
+            {
+                Debug.WriteLine(Value);
+
+                value = 1;
+            }
+        }
+
+        public class UseBeforeInitializationInSetterSample
+        {
+            int value;
+
+            public int Value
+            {
+                set
+                {
+                    Debug.WriteLine("Before: value = {0}", this.value);
+                    this.value = value;
+                    Debug.WriteLine("After: value = {0}", this.value);
+                }
+            }
+
+            public UseBeforeInitializationInSetterSample()
+            {
+                Value = 1;
+            }
+        }
+
+        public class UseBeforeInitializationInMethodSample
+        {
+            int value;
+
+            public void Write()
+            {
+                Debug.WriteLine(value);
+            }
+
+            public UseBeforeInitializationInMethodSample()
+            {
+                Write();
+
+                value = 1;
+            }
+        }
+
+        public class SetViaPrivateSetterSample
+        {
+            int value;
+            int Value
+            {
+                get { return value; }
+                set { this.value = value; }
+            }
+
+            public SetViaPrivateSetterSample()
+            {
             }
         }
     }

@@ -4,7 +4,4 @@ using System.Text;
 
 namespace VainZero.Sample
 {
-    public class Sample
-    {
-    }
 }
