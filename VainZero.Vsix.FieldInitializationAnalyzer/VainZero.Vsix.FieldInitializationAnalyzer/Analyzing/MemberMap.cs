@@ -15,9 +15,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         public ImmutableDictionary<ISymbol, MethodDeclarationSyntax> Methods { get; }
 
-        public ImmutableDictionary<ISymbol, AccessorDeclarationSyntax> Setters { get; }
-
-        public ImmutableArray<KeyValuePair<ISymbol, AccessorDeclarationSyntax>> PublicSetters { get; }
+        public ImmutableDictionary<ISymbol, Property> Properties { get; }
 
         public ImmutableArray<KeyValuePair<ISymbol, ConstructorDeclarationSyntax>> Constructors { get; }
 
@@ -25,15 +23,13 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         public MemberMap(ImmutableDictionary<ISymbol, MemberVariable> memberVariables,
                 ImmutableDictionary<ISymbol, MethodDeclarationSyntax> methods,
-                ImmutableDictionary<ISymbol, AccessorDeclarationSyntax> setters,
-                ImmutableArray<KeyValuePair<ISymbol, AccessorDeclarationSyntax>> publicSetters,
+                ImmutableDictionary<ISymbol, Property> properties,
                 ImmutableArray<KeyValuePair<ISymbol, ConstructorDeclarationSyntax>> constructors,
                 ImmutableHashSet<ISymbol> delegatedConstructors)
         {
             MemberVariables = memberVariables;
             Methods = methods;
-            Setters = setters;
-            PublicSetters = publicSetters;
+            Properties = properties;
             Constructors = constructors;
             DelegatedConstructors = delegatedConstructors;
         }

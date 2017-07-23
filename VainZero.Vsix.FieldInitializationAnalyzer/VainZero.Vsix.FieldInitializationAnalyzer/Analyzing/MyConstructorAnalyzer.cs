@@ -30,6 +30,8 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             Reporter = new MyReporter(analysisContext);
         }
 
+        bool enablesFieldDiagnostic = true;
+
         #region VisitedSymbols
         HashSet<ISymbol> VisitedSymbols { get; } = new HashSet<ISymbol>();
 
@@ -124,15 +126,36 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             }
         }
 
+        static bool IsAssigned(SyntaxNode node)
+        {
+            while (true)
+            {
+                if (node == null) return false;
+
+                var parent = node.Parent;
+                if (parent == null) return false;
+
+                if (parent is AssignmentExpressionSyntax assignment && assignment.Left == node) return true;
+
+                node = parent;
+            }
+        }
+
         void AnalyzeIdentifier(IdentifierNameSyntax identifier)
         {
             var symbol = SemanticModel.GetSymbolInfo(identifier).Symbol;
             if (symbol == null) return;
 
+            if (IsAssigned(identifier))
+            {
+
+            }
+
             if (IsMemberVariable(symbol) && !IsInitialized(symbol))
             {
                 Reporter.ReportFieldDiagnostic(identifier.GetLocation(), symbol);
             }
+
         }
 
         void AnalyzeStatements(SyntaxList<StatementSyntax> statements)

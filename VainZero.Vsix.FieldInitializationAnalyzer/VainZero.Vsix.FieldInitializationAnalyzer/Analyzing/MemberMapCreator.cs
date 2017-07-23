@@ -21,11 +21,8 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
         ImmutableDictionary<ISymbol, MethodDeclarationSyntax>.Builder Methods { get; } =
             ImmutableDictionary.CreateBuilder<ISymbol, MethodDeclarationSyntax>();
 
-        ImmutableDictionary<ISymbol, AccessorDeclarationSyntax>.Builder Setters { get; } =
-            ImmutableDictionary.CreateBuilder<ISymbol, AccessorDeclarationSyntax>();
-
-        ImmutableArray<KeyValuePair<ISymbol, AccessorDeclarationSyntax>>.Builder PublicSetters { get; } =
-            ImmutableArray.CreateBuilder<KeyValuePair<ISymbol, AccessorDeclarationSyntax>>();
+        ImmutableDictionary<ISymbol, Property>.Builder Properties { get; } =
+            ImmutableDictionary.CreateBuilder<ISymbol, Property>();
 
         ImmutableArray<KeyValuePair<ISymbol, ConstructorDeclarationSyntax>>.Builder Constructors { get; } =
             ImmutableArray.CreateBuilder<KeyValuePair<ISymbol, ConstructorDeclarationSyntax>>();
@@ -74,22 +71,27 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             MemberVariables.Add(symbol, new MemberVariable(symbol, canBeUninitialized: hasNonprivateSetter));
         }
 
-        void AddPropertySetter(PropertyDeclarationSyntax propertyDecl, IPropertySymbol symbol)
+        void AddProperty(PropertyDeclarationSyntax propertyDecl, IPropertySymbol symbol)
         {
-            if (symbol.IsReadOnly || symbol.IsAbstract || symbol.IsStatic) return;
-
+            if (symbol.IsAbstract || symbol.IsStatic) return;
             if (propertyDecl.AccessorList == null) return;
-            var setter =
-                propertyDecl.AccessorList.Accessors
-                .FirstOrDefault(a => a.Keyword.IsKind(SyntaxKind.SetKeyword));
-            if (setter == null || setter.Body == null) return;
 
-            Setters.Add(symbol, setter);
+            var getterDecl = default(AccessorDeclarationSyntax);
+            var setterDecl = default(AccessorDeclarationSyntax);
 
-            if (symbol.SetMethod != null && symbol.SetMethod.DeclaredAccessibility == Accessibility.Public)
+            foreach (var accessor in propertyDecl.AccessorList.Accessors)
             {
-                PublicSetters.Add(new KeyValuePair<ISymbol, AccessorDeclarationSyntax>(symbol, setter));
+                if (accessor.Keyword.IsKind(SyntaxKind.GetKeyword))
+                {
+                    getterDecl = accessor;
+                }
+                else if (accessor.Keyword.IsKind(SyntaxKind.SetKeyword))
+                {
+                    setterDecl = accessor;
+                }
             }
+
+            Properties.Add(symbol, new Property(symbol, getterDecl, setterDecl));
         }
 
         void AddMethod(MethodDeclarationSyntax methodDecl)
@@ -107,7 +109,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             var initializer = sourceDecl.Initializer;
             if (initializer != null && initializer.ThisOrBaseKeyword.IsKind(SyntaxKind.ThisKeyword))
             {
-                var symbol = SemanticModel.GetDeclaredSymbol(initializer);
+                var symbol = SemanticModel.GetSymbolInfo(initializer).Symbol;
                 if (symbol != null)
                 {
                     delegatedConstructorSymbol = symbol;
@@ -147,7 +149,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
                     if (symbol == null) continue;
 
                     AddPropertyAsMemberVariable(propertyDecl, symbol);
-                    AddPropertySetter(propertyDecl, symbol);
+                    AddProperty(propertyDecl, symbol);
                 }
                 else if (member is MethodDeclarationSyntax methodDecl)
                 {
@@ -163,8 +165,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
                 new MemberMap(
                     MemberVariables.ToImmutable(),
                     Methods.ToImmutable(),
-                    Setters.ToImmutable(),
-                    PublicSetters.ToImmutable(),
+                    Properties.ToImmutable(),
                     Constructors.ToImmutable(),
                     DelegatedConstructors.ToImmutable()
                 );
