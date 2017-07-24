@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26430.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VainZero.FieldInitializationAnalyzer", "VainZero.FieldInitializationAnalyzer\VainZero.FieldInitializationAnalyzer\VainZero.FieldInitializationAnalyzer.csproj", "{F616B79F-8BA8-415C-B76C-F9AF579ADDC1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VainZero.FieldInitializationAnalyzer.Test", "VainZero.FieldInitializationAnalyzer\VainZero.FieldInitializationAnalyzer.Test\VainZero.FieldInitializationAnalyzer.Test.csproj", "{778AEFED-826F-4C55-A3CC-C84E15BBDA49}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VainZero.FieldInitializationAnalyzer.Vsix", "VainZero.FieldInitializationAnalyzer\VainZero.FieldInitializationAnalyzer.Vsix\VainZero.FieldInitializationAnalyzer.Vsix.csproj", "{F9E86993-2EAC-402A-9EC8-EE300472A403}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F616B79F-8BA8-415C-B76C-F9AF579ADDC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F616B79F-8BA8-415C-B76C-F9AF579ADDC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F616B79F-8BA8-415C-B76C-F9AF579ADDC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F616B79F-8BA8-415C-B76C-F9AF579ADDC1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{778AEFED-826F-4C55-A3CC-C84E15BBDA49}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{778AEFED-826F-4C55-A3CC-C84E15BBDA49}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{778AEFED-826F-4C55-A3CC-C84E15BBDA49}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{778AEFED-826F-4C55-A3CC-C84E15BBDA49}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9E86993-2EAC-402A-9EC8-EE300472A403}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9E86993-2EAC-402A-9EC8-EE300472A403}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9E86993-2EAC-402A-9EC8-EE300472A403}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9E86993-2EAC-402A-9EC8-EE300472A403}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
