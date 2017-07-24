@@ -35,10 +35,11 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer
         }
 
         /// <summary>
-        /// Gets a value indicating whether the expression appears as a setter.
-        /// It's assumed that the expression is a property or indexer.
+        /// Gets a value indicating whether the expression is being assigned,
+        /// i.e. appears on the left hand side of assignment expressions
+        /// or as the operand of increment/decrement operators.
         /// </summary>
-        public static bool IsSetter(this SyntaxNode node)
+        public static bool IsAssigned(this SyntaxNode node)
         {
             while (true)
             {

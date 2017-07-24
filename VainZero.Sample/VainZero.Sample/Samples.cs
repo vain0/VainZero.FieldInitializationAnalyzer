@@ -58,8 +58,9 @@ namespace VainZero.Sample
 
             public RefArgumentSample()
             {
-                // NG: `ref` arguments can be used before initialization.
-                Interlocked.Increment(ref value);
+                // OK: No warning even though `ref` arguments can be used before initialization.
+                // This is a workaround to BindableBase.SetProperty from Prism.
+                Interlocked.Exchange(ref value, 1);
 
                 Debug.WriteLine(value);
             }
@@ -171,7 +172,7 @@ namespace VainZero.Sample
             }
         }
 
-        public class SetViaPublicSetterSample
+        public class SetViaSetterSample
         {
             int value;
             public int Value
@@ -180,9 +181,10 @@ namespace VainZero.Sample
                 set { this.value = value; }
             }
 
-            public SetViaPublicSetterSample()
+            public SetViaSetterSample()
             {
-                // OK: Because `value` is a backing field of `Value`, it doesn't need to be initialized.
+                // OK: Because `value` is a backing field of `Value`,
+                // it doesn't need to be initialized.
             }
         }
     }
@@ -249,7 +251,12 @@ namespace VainZero.Sample
 
             public int Value
             {
-                get { return value; }
+                get
+                {
+                    // NG: The getter is invoked from the constructor
+                    // and `value` is used before initialization.
+                    return value;
+                }
             }
 
             public UseBeforeInitializationInGetterSample()
@@ -268,6 +275,8 @@ namespace VainZero.Sample
             {
                 set
                 {
+                    // NG: This setter is invoked from the constructor
+                    // and `value` isn't initialized.
                     Debug.WriteLine("Before: value = {0}", this.value);
                     this.value = value;
                     Debug.WriteLine("After: value = {0}", this.value);
@@ -286,6 +295,7 @@ namespace VainZero.Sample
 
             public void Write()
             {
+                // NG: Indirect use before initialization.
                 Debug.WriteLine(value);
             }
 
@@ -297,16 +307,51 @@ namespace VainZero.Sample
             }
         }
 
-        public class SetViaPrivateSetterSample
+        public class UseBeforeInitializationInIndexerSample
         {
-            int value;
-            int Value
+            static readonly int[] array = new[] { 0, 1, 2 };
+
+            int offset;
+
+            int this[int index]
             {
-                get { return value; }
-                set { this.value = value; }
+                get { return array[offset + index]; }
+                set { array[offset + index] = value; }
             }
 
-            public SetViaPrivateSetterSample()
+            public UseBeforeInitializationInIndexerSample()
+            {
+                Debug.WriteLine(this[0]);
+                this[0] = 1;
+
+                offset = 0;
+            }
+        }
+    }
+
+    namespace IncorrectCases
+    {
+        public interface IContainer<T>
+        {
+            T Value { get; set; }
+        }
+
+        public static class ContainerExtension
+        {
+            public static void Set<X>(this IContainer<X> container, X value)
+            {
+                container.Value = value;
+            }
+        }
+
+        public class InitializeInMethodsFromOther
+            : IContainer<int>
+        {
+
+
+            public int Value { get; set; }
+
+            public InitializeInMethodsFromOther()
             {
             }
         }

@@ -21,8 +21,6 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         MemberMap MemberMap { get; }
 
-        bool reportsUseOfUninitializedVariable = true;
-
         public MyCodeAnalyzer(SyntaxNodeAnalysisContext analysisContext,
                 MemberMap memberMap)
         {
@@ -39,7 +37,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         /// <summary>
         /// Tries to visit the body of a symbol (constructor, method or setter).
-        /// Returns <c>false</c> if visited or currently visiting.
+        /// Returns <c>false</c> if visited, currently visiting or maybe in an infinite loop.
         /// </summary>
         public bool TryVisit(ISymbol symbol)
         {
@@ -121,25 +119,14 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             if (symbol == null) return;
 
             MarkAsInitialized(symbol);
-
-            if (MemberMap.Setters.TryGetValue(symbol, out var accessorDecl) && accessorDecl.Body != null)
-            {
-                AnalyzeMethod(accessorDecl.Body, symbol);
-            }
         }
 
-        static bool IsAssigned(SyntaxNode node)
+        void AnalyzeProperty(Property property, bool isAssigned)
         {
-            while (true)
+            var body = isAssigned ? property.SetterDecl?.Body : property.GetterDecl?.Body;
+            if (body != null)
             {
-                if (node == null) return false;
-
-                var parent = node.Parent;
-                if (parent == null) return false;
-
-                if (parent is AssignmentExpressionSyntax assignment && assignment.Left == node) return true;
-
-                node = parent;
+                AnalyzeStatements(body.Statements);
             }
         }
 
@@ -148,16 +135,32 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             var symbol = SemanticModel.GetSymbolInfo(identifier).Symbol;
             if (symbol == null) return;
 
-            if (IsAssigned(identifier))
-            {
-                SemanticModel.
-            }
-
-            if (IsMemberVariable(symbol) && !IsInitialized(symbol))
+            if (enablesFieldDiagnostic
+                && IsMemberVariable(symbol)
+                && !IsInitialized(symbol)
+                )
             {
                 Reporter.ReportFieldDiagnostic(identifier.GetLocation(), symbol);
             }
 
+            if (MemberMap.Properties.TryGetValue(symbol, out var property))
+            {
+                AnalyzeProperty(property, identifier.IsAssigned());
+            }
+        }
+
+        void AnalyzeThis(ThisExpressionSyntax thisExpression)
+        {
+            // Indexer case.
+            if (thisExpression.Parent is ElementAccessExpressionSyntax elementAccess
+                && elementAccess.Expression == thisExpression)
+            {
+                var indexer = MemberMap.Properties.Values.FirstOrDefault(p => p.Symbol.IsIndexer);
+                if (indexer != null)
+                {
+                    AnalyzeProperty(indexer, elementAccess.IsAssigned());
+                }
+            }
         }
 
         void AnalyzeStatements(SyntaxList<StatementSyntax> statements)
@@ -178,6 +181,10 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
                     else if (node is IdentifierNameSyntax identifier)
                     {
                         AnalyzeIdentifier(identifier);
+                    }
+                    else if (node is ThisExpressionSyntax thisExpression)
+                    {
+                        AnalyzeThis(thisExpression);
                     }
                 }
             }
@@ -217,23 +224,19 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             var body = constructorDecl.Body;
             if (body != null)
             {
-                if (body.Statements.Count == 1)
-                {
-                    var controlFlow = SemanticModel.AnalyzeControlFlow(body.Statements[0]);
-                    var dataFlow = default(DataFlowAnalysis);
-                    default(IPropertySymbol).
-                }
-
                 AnalyzeStatements(body.Statements);
             }
         }
 
-        void AnalyzePublicSetters()
+        void AnalyzeSetters()
         {
-            foreach (var (key, value) in MemberMap.Properties)
+            foreach (var kv in MemberMap.Properties)
             {
-                if (kv.Value.Body == null) continue;
-                AnalyzeMethod(kv.Value.Body, kv.Key);
+                var body = kv.Value.SetterDecl?.Body;
+                if (body == null) continue;
+
+                var symbol = kv.Key;
+                AnalyzeMethod(body, symbol);
             }
         }
 
@@ -257,11 +260,13 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         public void Analyze(ConstructorDeclarationSyntax constructorDecl, ISymbol constructorSymbol)
         {
-            reportsUseOfUninitializedVariable = true;
+            // Collect initialized variables and warns use of uninitialized ones.
+            enablesFieldDiagnostic = true;
             AnalyzeConstructor(constructorDecl, constructorSymbol);
 
-            reportsUseOfUninitializedVariable = false;
-            AnalyzePublicSetters();
+            // Collect initialized variables via setters to suppress constructor diagnostic.
+            enablesFieldDiagnostic = false;
+            AnalyzeSetters();
 
             ReportUninitializedFields(constructorDecl);
         }

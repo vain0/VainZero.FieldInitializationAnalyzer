@@ -65,13 +65,13 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             if (symbol.IsAbstract || symbol.IsStatic || symbol.IsIndexer) return;
 
             var hasNonprivateSetter =
-                !symbol.IsReadOnly
+                symbol.SetMethod != null
                 && symbol.SetMethod.DeclaredAccessibility != Accessibility.Private;
 
             Variables.Add(symbol, new MemberVariable(symbol, canBeUninitialized: hasNonprivateSetter));
         }
 
-        void AddProperty(PropertyDeclarationSyntax propertyDecl, IPropertySymbol symbol)
+        void AddPropertyOrIndexer(BasePropertyDeclarationSyntax propertyDecl, IPropertySymbol symbol)
         {
             if (symbol.IsAbstract || symbol.IsStatic) return;
             if (propertyDecl.AccessorList == null) return;
@@ -149,7 +149,14 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
                     if (symbol == null) continue;
 
                     AddPropertyAsMemberVariable(propertyDecl, symbol);
-                    AddProperty(propertyDecl, symbol);
+                    AddPropertyOrIndexer(propertyDecl, symbol);
+                }
+                else if (member is IndexerDeclarationSyntax indexerDecl)
+                {
+                    var symbol = SemanticModel.GetDeclaredSymbol(indexerDecl);
+                    if (symbol == null) continue;
+
+                    AddPropertyOrIndexer(indexerDecl, symbol);
                 }
                 else if (member is MethodDeclarationSyntax methodDecl)
                 {
