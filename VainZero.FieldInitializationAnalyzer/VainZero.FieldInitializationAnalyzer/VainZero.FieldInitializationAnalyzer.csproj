@@ -34,20 +34,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CodeFixProvider.cs" />
+    <Compile Include="Analyzing\MemberMap.cs" />
+    <Compile Include="Analyzing\MemberMapCreator.cs" />
+    <Compile Include="Analyzing\MemberVariable.cs" />
+    <Compile Include="Analyzing\MyCodeAnalyzer.cs" />
+    <Compile Include="Analyzing\MyReporter.cs" />
+    <Compile Include="Analyzing\MyTypeAnalyzer.cs" />
+    <Compile Include="Analyzing\Property.cs" />
     <Compile Include="DiagnosticAnalyzer.cs" />
+    <Compile Include="Helpers\SyntaxExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <None Include="Diagnostic.nuspec">
@@ -61,7 +57,6 @@
     <None Include="tools\uninstall.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <Analyzer Include="..\..\packages\Microsoft.CodeAnalysis.Analyzers.1.1.0\analyzers\dotnet\cs\Microsoft.CodeAnalysis.Analyzers.dll" />
