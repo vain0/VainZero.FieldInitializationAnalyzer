@@ -15,7 +15,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
     {
         SemanticModel SemanticModel { get; }
 
-        ImmutableDictionary<ISymbol, MemberVariable>.Builder MemberVariables { get; } =
+        ImmutableDictionary<ISymbol, MemberVariable>.Builder Variables { get; } =
             ImmutableDictionary.CreateBuilder<ISymbol, MemberVariable>();
 
         ImmutableDictionary<ISymbol, MethodDeclarationSyntax>.Builder Methods { get; } =
@@ -50,7 +50,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
                 var isPublic = symbol.DeclaredAccessibility == Accessibility.Public;
                 var canBeUninitialized = !isReadOnly && isPublic;
 
-                MemberVariables.Add(symbol, new MemberVariable(symbol, canBeUninitialized));
+                Variables.Add(symbol, new MemberVariable(symbol, canBeUninitialized));
             }
         }
 
@@ -62,13 +62,13 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             if (propertyDecl.AccessorList == null) return;
             if (propertyDecl.AccessorList.Accessors.Any(a => a.Body != null)) return;
 
-            if (symbol.IsAbstract || symbol.IsStatic) return;
+            if (symbol.IsAbstract || symbol.IsStatic || symbol.IsIndexer) return;
 
             var hasNonprivateSetter =
                 !symbol.IsReadOnly
                 && symbol.SetMethod.DeclaredAccessibility != Accessibility.Private;
 
-            MemberVariables.Add(symbol, new MemberVariable(symbol, canBeUninitialized: hasNonprivateSetter));
+            Variables.Add(symbol, new MemberVariable(symbol, canBeUninitialized: hasNonprivateSetter));
         }
 
         void AddProperty(PropertyDeclarationSyntax propertyDecl, IPropertySymbol symbol)
@@ -163,7 +163,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
             return
                 new MemberMap(
-                    MemberVariables.ToImmutable(),
+                    Variables.ToImmutable(),
                     Methods.ToImmutable(),
                     Properties.ToImmutable(),
                     Constructors.ToImmutable(),

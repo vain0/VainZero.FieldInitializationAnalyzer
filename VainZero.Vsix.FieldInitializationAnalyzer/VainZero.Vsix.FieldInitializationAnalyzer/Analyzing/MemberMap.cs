@@ -11,7 +11,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 {
     public sealed class MemberMap
     {
-        public ImmutableDictionary<ISymbol, MemberVariable> MemberVariables { get; }
+        public ImmutableDictionary<ISymbol, MemberVariable> Variables { get; }
 
         public ImmutableDictionary<ISymbol, MethodDeclarationSyntax> Methods { get; }
 
@@ -21,13 +21,13 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         public ImmutableHashSet<ISymbol> DelegatedConstructors { get; }
 
-        public MemberMap(ImmutableDictionary<ISymbol, MemberVariable> memberVariables,
+        public MemberMap(ImmutableDictionary<ISymbol, MemberVariable> variables,
                 ImmutableDictionary<ISymbol, MethodDeclarationSyntax> methods,
                 ImmutableDictionary<ISymbol, Property> properties,
                 ImmutableArray<KeyValuePair<ISymbol, ConstructorDeclarationSyntax>> constructors,
                 ImmutableHashSet<ISymbol> delegatedConstructors)
         {
-            MemberVariables = memberVariables;
+            Variables = variables;
             Methods = methods;
             Properties = properties;
             Constructors = constructors;

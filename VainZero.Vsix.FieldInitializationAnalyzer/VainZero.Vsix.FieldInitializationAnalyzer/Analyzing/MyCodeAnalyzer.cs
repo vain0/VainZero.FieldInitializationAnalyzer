@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 {
-    public sealed class MyConstructorAnalyzer
+    public sealed class MyCodeAnalyzer
     {
         SyntaxNodeAnalysisContext AnalysisContext { get; }
 
@@ -21,7 +21,9 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         MemberMap MemberMap { get; }
 
-        public MyConstructorAnalyzer(SyntaxNodeAnalysisContext analysisContext,
+        bool reportsUseOfUninitializedVariable = true;
+
+        public MyCodeAnalyzer(SyntaxNodeAnalysisContext analysisContext,
                 MemberMap memberMap)
         {
             AnalysisContext = analysisContext;
@@ -60,7 +62,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         bool IsMemberVariable(ISymbol symbol)
         {
-            return MemberMap.MemberVariables.ContainsKey(symbol);
+            return MemberMap.Variables.ContainsKey(symbol);
         }
 
         bool IsInitialized(ISymbol symbol)
@@ -148,7 +150,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
             if (IsAssigned(identifier))
             {
-
+                SemanticModel.
             }
 
             if (IsMemberVariable(symbol) && !IsInitialized(symbol))
@@ -215,13 +217,20 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             var body = constructorDecl.Body;
             if (body != null)
             {
+                if (body.Statements.Count == 1)
+                {
+                    var controlFlow = SemanticModel.AnalyzeControlFlow(body.Statements[0]);
+                    var dataFlow = default(DataFlowAnalysis);
+                    default(IPropertySymbol).
+                }
+
                 AnalyzeStatements(body.Statements);
             }
         }
 
         void AnalyzePublicSetters()
         {
-            foreach (var kv in MemberMap.PublicSetters)
+            foreach (var (key, value) in MemberMap.Properties)
             {
                 if (kv.Value.Body == null) continue;
                 AnalyzeMethod(kv.Value.Body, kv.Key);
@@ -235,7 +244,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
         void ReportUninitializedFields(ConstructorDeclarationSyntax constructorDecl)
         {
             var uninitializedSymbols =
-                MemberMap.MemberVariables
+                MemberMap.Variables
                 .Where(kv => !IsInitialized(kv.Key) && !kv.Value.CanBeUninitialized)
                 .Select(kv => kv.Key)
                 .ToImmutableArray();
@@ -248,8 +257,12 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         public void Analyze(ConstructorDeclarationSyntax constructorDecl, ISymbol constructorSymbol)
         {
+            reportsUseOfUninitializedVariable = true;
             AnalyzeConstructor(constructorDecl, constructorSymbol);
+
+            reportsUseOfUninitializedVariable = false;
             AnalyzePublicSetters();
+
             ReportUninitializedFields(constructorDecl);
         }
     }

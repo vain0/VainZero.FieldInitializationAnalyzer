@@ -33,7 +33,7 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
                 if (memberMap.DelegatedConstructors.Contains(constructorSymbol)) continue;
 
-                var constructorAnalyzer = new MyConstructorAnalyzer(AnalysisContext, memberMap);
+                var constructorAnalyzer = new MyCodeAnalyzer(AnalysisContext, memberMap);
                 constructorAnalyzer.Analyze(constructorDecl, constructorSymbol);
             }
         }

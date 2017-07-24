@@ -39,16 +39,18 @@
     <Compile Include="Analyzing\MyReporter.cs" />
     <Compile Include="Analyzing\MyTypeAnalyzer.cs" />
     <Compile Include="Analyzing\MemberMapCreator.cs" />
-    <Compile Include="Analyzing\MyConstructorAnalyzer.cs" />
+    <Compile Include="Analyzing\MyCodeAnalyzer.cs" />
+    <Compile Include="Analyzing\Property.cs" />
     <Compile Include="CodeFixProvider.cs" />
     <Compile Include="DiagnosticAnalyzer.cs" />
+    <Compile Include="Helpers\KeyValuePairExtension.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="SyntaxExtension.cs" />
+    <Compile Include="Helpers\SyntaxExtension.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources.resx">
