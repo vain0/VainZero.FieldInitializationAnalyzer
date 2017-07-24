@@ -20,5 +20,9 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             GetterDecl = getterDecl;
             SetterDecl = setterDecl;
         }
+
+        public bool HasNonprivateSetter =>
+            Symbol.SetMethod != null
+            && Symbol.SetMethod.DeclaredAccessibility != Accessibility.Private;
     }
 }

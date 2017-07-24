@@ -159,7 +159,7 @@ namespace VainZero.Sample
                 value1 = 1;
 
                 // OK: This constructor doesn't initialize `value2`, however,
-                //     the delegating constructor does.
+                // the delegating constructor does.
             }
 
             public InitializeViaDelegatedConstructorSample(string x)
@@ -172,51 +172,39 @@ namespace VainZero.Sample
             }
         }
 
-        public class SetViaSetterSample
+        public class SetViaNonprivateSetterSample
         {
-            int value;
-            public int Value
+            int publicValue;
+            public int PublicValue
             {
-                get { return value; }
-                set { this.value = value; }
+                get { return publicValue; }
+                set { publicValue = value; }
             }
 
-            public SetViaSetterSample()
+            int protectedValue;
+            protected int ProtectedValue
             {
-                // OK: Because `value` is a backing field of `Value`,
-                // it doesn't need to be initialized.
+                get { return protectedValue; }
+                set { protectedValue = value; }
+            }
+
+            int internalValue;
+            internal int InternalValue
+            {
+                get { return internalValue; }
+                set { internalValue = value; }
+            }
+
+            public SetViaNonprivateSetterSample()
+            {
+                // OK: Because fields are backing field of property with non-private setter,
+                // they don't need to be initialized.
             }
         }
     }
 
     namespace NGCases
     {
-        public class NotInitializeFieldSample
-        {
-            int value;
-
-            public NotInitializeFieldSample()
-            {
-                // NG: Use before initialization.
-                Debug.WriteLine(value);
-
-                value = 1;
-            }
-        }
-
-        public class NotInitializePropertySample
-        {
-            public int Value { get; set; }
-
-            public NotInitializePropertySample(int x)
-            {
-                // NG: Use before initialization.
-                Debug.WriteLine(Value);
-
-                Value = 1;
-            }
-        }
-
         public class NotInitializeReadOnlyPropertySample
         {
             public int Value { get; }
@@ -224,14 +212,6 @@ namespace VainZero.Sample
             public NotInitializeReadOnlyPropertySample()
             {
                 // NG: Not initialized.
-            }
-
-            public NotInitializeReadOnlyPropertySample(int x)
-            {
-                // NG: Use before initialization.
-                Debug.WriteLine(Value);
-
-                Value = 1;
             }
         }
 
@@ -242,6 +222,60 @@ namespace VainZero.Sample
             public NotInitializePrivateSetterPropertySample()
             {
                 // NG: Not initialized.
+            }
+        }
+
+        public class NotInitializePrivateSetterBackingFieldSample
+        {
+            int value;
+            public int Value
+            {
+                get { return value; }
+                private set { this.value = value; }
+            }
+
+            public NotInitializePrivateSetterBackingFieldSample()
+            {
+                // NG: Not iniailized.
+            }
+        }
+
+        public class UseBeforeInitializatoinFieldSample
+        {
+            int value;
+
+            public UseBeforeInitializatoinFieldSample()
+            {
+                // NG: Use before initialization.
+                Debug.WriteLine(value);
+
+                value = 1;
+            }
+        }
+
+        public class UseBeforeInitializationPrpoertySample
+        {
+            public int Value { get; set; }
+
+            public UseBeforeInitializationPrpoertySample(int x)
+            {
+                // NG: Use before initialization.
+                Debug.WriteLine(Value);
+
+                Value = 1;
+            }
+        }
+
+        public class UseBeforeInitializationReadOnlyPropertySample
+        {
+            public int Value { get; }
+
+            public UseBeforeInitializationReadOnlyPropertySample(int x)
+            {
+                // NG: Use before initialization.
+                Debug.WriteLine(Value);
+
+                Value = 1;
             }
         }
 
@@ -329,30 +363,23 @@ namespace VainZero.Sample
         }
     }
 
-    namespace IncorrectCases
+    namespace KnownIssues
     {
-        public interface IContainer<T>
+        public class EventSample
         {
-            T Value { get; set; }
-        }
+            int value;
 
-        public static class ContainerExtension
-        {
-            public static void Set<X>(this IContainer<X> container, X value)
+            public event EventHandler Event
             {
-                container.Value = value;
+                add { this.value = 1; }
+                remove { }
             }
-        }
 
-        public class InitializeInMethodsFromOther
-            : IContainer<int>
-        {
-
-
-            public int Value { get; set; }
-
-            public InitializeInMethodsFromOther()
+            public EventSample()
             {
+                Event += (sender, e) => { };
+
+                // NG (but actually OK): Not initialized.
             }
         }
     }

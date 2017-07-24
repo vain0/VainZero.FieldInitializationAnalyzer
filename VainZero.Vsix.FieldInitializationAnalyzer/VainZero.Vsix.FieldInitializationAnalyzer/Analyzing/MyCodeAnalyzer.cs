@@ -228,15 +228,16 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
             }
         }
 
-        void AnalyzeSetters()
+        void AnalyzeNonprivateSetters()
         {
-            foreach (var kv in MemberMap.Properties)
+            foreach (var property in MemberMap.Properties.Values)
             {
-                var body = kv.Value.SetterDecl?.Body;
+                if (!property.HasNonprivateSetter) continue;
+
+                var body = property.SetterDecl?.Body;
                 if (body == null) continue;
 
-                var symbol = kv.Key;
-                AnalyzeMethod(body, symbol);
+                AnalyzeMethod(body, property.Symbol);
             }
         }
 
@@ -260,13 +261,13 @@ namespace VainZero.Vsix.FieldInitializationAnalyzer.Analyzing
 
         public void Analyze(ConstructorDeclarationSyntax constructorDecl, ISymbol constructorSymbol)
         {
-            // Collect initialized variables and warns use of uninitialized ones.
+            // Collect initializations and warns use of uninitialized variables.
             enablesFieldDiagnostic = true;
             AnalyzeConstructor(constructorDecl, constructorSymbol);
 
-            // Collect initialized variables via setters to suppress constructor diagnostic.
+            // Collect initializations via non-private setters to suppress constructor diagnostic.
             enablesFieldDiagnostic = false;
-            AnalyzeSetters();
+            AnalyzeNonprivateSetters();
 
             ReportUninitializedFields(constructorDecl);
         }
